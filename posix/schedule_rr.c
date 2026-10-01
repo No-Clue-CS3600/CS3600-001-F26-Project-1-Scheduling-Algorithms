@@ -1,4 +1,6 @@
-// the file name is schedule_rr.c, namely because the repository provided used this name
+//This is the Round-Robin Scheduler Implementation for our Team 
+//The file name is schedule_rr.c, because the proffesors provided repository used this naming convention
+//Portions of this file were developed with assistance from AI 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
