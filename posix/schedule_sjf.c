@@ -1,130 +1,136 @@
 /*
 This code uses AI generated code from Chat GPT
 */
+// Shortest-Job-First Scheduler Implementation
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "task.h"
-#include "list.h"
 #include "schedulers.h"
 #include "cpu.h"
 
-struct node *head = NULL;
-int task_count = 0;
+typedef struct sjfnode {
+    Task *task;
+    struct sjfnode *next;
+} SJFNode;
+
+static SJFNode *head = NULL;
+static int task_count = 0;
 
 void add(char *name, int priority, int burst)
 {
-    Task *newTask = malloc(sizeof(Task));
+    Task *t = malloc(sizeof(Task));
 
-    if (newTask == NULL) {
-        fprintf(stderr, "Error allocating memory.\n");
+    if (t == NULL) {
+        fprintf(stderr, "Failed to allocate Task\n");
         exit(1);
     }
 
-    newTask->name = strdup(name);
-    newTask->priority = priority;
-    newTask->burst = burst;
-    newTask->tid = 0;
+    t->name = strdup(name);
+    t->priority = priority;
+    t->burst = burst;
+    t->tid = 0;
 
-    insert(&head, newTask);
+    SJFNode *node = malloc(sizeof(SJFNode));
+
+    if (node == NULL) {
+        fprintf(stderr, "Failed to allocate SJFNode\n");
+        free(t->name);
+        free(t);
+        exit(1);
+    }
+
+    node->task = t;
+    node->next = head;
+    head = node;
 
     task_count++;
 }
 
-Task *pickNextTask(void)
+static SJFNode *find_shortest(SJFNode **previous)
 {
-    struct node *current;
-    Task *shortest;
-
     if (head == NULL) {
         return NULL;
     }
 
-    shortest = head->task;
-    current = head->next;
+    SJFNode *shortest = head;
+    SJFNode *shortest_previous = NULL;
+
+    SJFNode *current = head;
+    SJFNode *current_previous = NULL;
 
     while (current != NULL) {
 
-        if (current->task->burst <= shortest->burst) {
-            shortest = current->task;
+        if (current->task->burst < shortest->task->burst) {
+            shortest = current;
+            shortest_previous = current_previous;
         }
 
+        current_previous = current;
         current = current->next;
     }
+
+    *previous = shortest_previous;
 
     return shortest;
 }
 
-void removeTask(Task *task)
-{
-    struct node *current = head;
-    struct node *previous = NULL;
-
-    while (current != NULL) {
-
-        if (current->task == task) {
-
-            if (previous == NULL) {
-                head = current->next;
-            }
-            else {
-                previous->next = current->next;
-            }
-
-            free(current);
-            return;
-        }
-
-        previous = current;
-        current = current->next;
-    }
-}
-
 void schedule(void)
 {
+    if (task_count == 0) {
+        printf("No tasks to schedule.\n");
+        return;
+    }
+
     int current_time = 0;
 
-    double total_turnaround = 0;
-    double total_waiting = 0;
-    double total_response = 0;
+    double total_turnaround = 0.0;
+    double total_waiting = 0.0;
+    double total_response = 0.0;
 
     while (head != NULL) {
 
-        Task *task = pickNextTask();
+        SJFNode *previous = NULL;
+        SJFNode *node = find_shortest(&previous);
 
-        int waiting_time = current_time;
-        int response_time = current_time;
+        Task *t = node->task;
 
-        printf("Running task = [%s] [%d] [%d]\n",
-               task->name,
-               task->priority,
-               task->burst);
+        int start_time = current_time;
 
-        run(task, task->burst);
+        int waiting_time = start_time;
+        int response_time = start_time;
 
-        current_time += task->burst;
+        run(t, t->burst);
 
-        int turnaround_time = current_time;
+        current_time += t->burst;
+
+        int completion_time = current_time;
+
+        int turnaround_time = completion_time;
 
         total_waiting += waiting_time;
         total_response += response_time;
         total_turnaround += turnaround_time;
 
-        removeTask(task);
+        if (previous == NULL) {
+            head = node->next;
+        }
+        else {
+            previous->next = node->next;
+        }
 
-        free(task->name);
-        free(task);
+        free(t->name);
+        free(t);
+        free(node);
     }
 
-    if (task_count > 0) {
-        printf("\nAverage Turnaround Time = %.2f\n",
-               total_turnaround / task_count);
+    printf("Average Turnaround Time: %.2f\n",
+           total_turnaround / task_count);
 
-        printf("Average Waiting Time = %.2f\n",
-               total_waiting / task_count);
+    printf("Average Waiting Time: %.2f\n",
+           total_waiting / task_count);
 
-        printf("Average Response Time = %.2f\n",
-               total_response / task_count);
-    }
+    printf("Average Response Time: %.2f\n",
+           total_response / task_count);
 }
