@@ -62,7 +62,7 @@ static SJFNode *find_shortest(SJFNode **previous)
 
     while (current != NULL) {
 
-        if (current->task->burst < shortest->task->burst) {
+        if (current->task->burst <= shortest->task->burst) {
             shortest = current;
             shortest_previous = current_previous;
         }
