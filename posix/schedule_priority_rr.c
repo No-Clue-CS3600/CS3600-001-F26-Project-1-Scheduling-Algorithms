@@ -60,7 +60,7 @@ void add(char *name, int priority, int burst) {
     task_count++;
 }
 
-static PRRNode *pop_highest_priority(void) {
+static PRRNode *pickNextTask(void){
     if (head == NULL) {
         return NULL;
     }
@@ -121,7 +121,7 @@ void schedule() {
     double total_response = 0.0;
 
     while (completed < task_count) {
-        PRRNode *node = pop_highest_priority();
+        PRRNode *node = pickNextTask();
 
         if (node == NULL) {
             break;
