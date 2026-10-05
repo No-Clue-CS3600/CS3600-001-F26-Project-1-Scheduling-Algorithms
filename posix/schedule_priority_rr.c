@@ -106,3 +106,71 @@ static void push_tail(PRRNode *node) {
         tail = node;
     }
 }
+
+void schedule() {
+    if (task_count == 0) {
+        printf("No tasks to schedule.\n");
+        return;
+    }
+
+    int current_time = 0;
+    int completed = 0;
+
+    double total_turnaround = 0.0;
+    double total_waiting = 0.0;
+    double total_response = 0.0;
+
+    while (completed < task_count) {
+        PRRNode *node = pop_highest_priority();
+
+        if (node == NULL) {
+            break;
+        }
+
+        Task *t = node->task;
+
+        if (!node->started) {
+            node->started = 1;
+            node->start_time = current_time;
+            total_response += node->start_time;
+        }
+
+        int slice;
+
+        if (node->remaining > QUANTUM) {
+            slice = QUANTUM;
+        } else {
+            slice = node->remaining;
+        }
+
+        run(t, slice);
+
+        node->remaining -= slice;
+        current_time += slice;
+
+        if (node->remaining <= 0) {
+            int turnaround = current_time;
+            int waiting = turnaround - t->burst;
+
+            total_turnaround += turnaround;
+            total_waiting += waiting;
+
+            free(t->name);
+            free(t);
+            free(node);
+
+            completed++;
+        } else {
+            push_tail(node);
+        }
+    }
+
+    printf("\nAverage Turnaround Time: %.2f\n",
+           total_turnaround / task_count);
+
+    printf("Average Waiting Time: %.2f\n",
+           total_waiting / task_count);
+
+    printf("Average Response Time: %.2f\n",
+           total_response / task_count);
+}
